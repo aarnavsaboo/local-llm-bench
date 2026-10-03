@@ -1,0 +1,1 @@
+A retrieval pipeline can combine several stages: document segmentation, lexical retrieval, embedding retrieval, rank fusion, optional reranking, evidence packing and generation. Each stage adds compute and can improve or reduce downstream quality depending on the corpus. Write a concise technical summary that explains why benchmarking each stage independently is useful.

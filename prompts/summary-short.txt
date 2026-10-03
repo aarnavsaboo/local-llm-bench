@@ -1,0 +1,1 @@
+Summarize the trade-offs between lexical retrieval, embedding retrieval and reranking for a local RAG pipeline.
