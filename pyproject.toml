@@ -5,11 +5,17 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "local-llm-bench"
 version = "0.1.0"
-description = "Local language-model benchmark harness"
+description = "Config-driven benchmark and workload runner for local language-model inference."
+readme = "README.md"
 requires-python = ">=3.10"
+authors = [{name = "Aarnav Saboo"}]
+keywords = ["llm", "inference", "benchmarking", "local-models", "evaluation"]
 
 [project.scripts]
 local-llm-bench = "local_llm_bench.__main__:main"
+
+[project.urls]
+Repository = "https://github.com/aarnavsaboo/local-llm-bench"
 
 [tool.setuptools.packages.find]
 include = ["local_llm_bench*"]
