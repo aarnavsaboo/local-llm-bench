@@ -1,0 +1,6 @@
+{
+  "models": ["qwen3:4b", "gemma3:4b"],
+  "prompt_lengths": [256, 1024, 4096],
+  "num_predict": [64, 256],
+  "runs": 5
+}
