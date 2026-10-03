@@ -87,3 +87,9 @@ The reporting layer intentionally computes from raw JSONL rather than mutating i
 No fixed benchmark ranking is committed. Local inference results depend heavily on model build, quantization, runtime version, prompt shape and machine state.
 
 Maintained by **Aarnav Saboo**.
+
+## Tests
+
+```bash
+python -m unittest discover -s tests -v
+```
