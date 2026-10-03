@@ -4,48 +4,65 @@ from argparse import ArgumentParser
 from pathlib import Path
 import json
 
-from .ollama import run_ollama
+from .backends import OllamaBackend, OpenAICompatibleBackend
+from .executor import execute, write_jsonl
+from .planner import Job, expand_manifest, load_manifest
+from .report import grouped
 from .stats import summarize
 
 
 def _read_jsonl(path: str):
-    with Path(path).open(encoding="utf-8") as handle:
-        for line in handle:
-            if line.strip():
-                yield json.loads(line)
+    for line in Path(path).read_text(encoding="utf-8").splitlines():
+        if line.strip():
+            yield json.loads(line)
+
+
+def _read_jobs(path: str) -> list[Job]:
+    return [Job(**row) for row in _read_jsonl(path)]
 
 
 def main() -> None:
     parser = ArgumentParser()
     sub = parser.add_subparsers(dest="command", required=True)
 
-    run = sub.add_parser("ollama")
-    run.add_argument("--model", required=True)
-    run.add_argument("--prompt", required=True)
-    run.add_argument("--runs", type=int, default=3)
-    run.add_argument("--output", required=True)
-    run.add_argument("--endpoint", default="http://127.0.0.1:11434")
-    run.add_argument("--num-predict", type=int, default=128)
+    plan = sub.add_parser("plan")
+    plan.add_argument("manifest")
 
-    report = sub.add_parser("summarize")
+    run = sub.add_parser("execute")
+    run.add_argument("plan")
+    run.add_argument("--backend", choices=["ollama","openai-compatible"], default="ollama")
+    run.add_argument("--endpoint")
+    run.add_argument("--out", required=True)
+
+    report = sub.add_parser("report")
     report.add_argument("path")
 
+    legacy = sub.add_parser("summarize")
+    legacy.add_argument("path")
+
     args = parser.parse_args()
-    if args.command == "ollama":
-        target = Path(args.output)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        with target.open("a", encoding="utf-8") as handle:
-            for _ in range(args.runs):
-                row = run_ollama(
-                    args.model,
-                    args.prompt,
-                    endpoint=args.endpoint,
-                    options={"num_predict": args.num_predict},
-                ).to_dict()
-                handle.write(json.dumps(row, sort_keys=True) + "\n")
-                print(json.dumps(row, indent=2))
+
+    if args.command == "plan":
+        for job in expand_manifest(load_manifest(args.manifest)):
+            print(json.dumps(job.to_dict(), sort_keys=True))
+        return
+
+    if args.command == "execute":
+        if args.backend == "ollama":
+            backend = OllamaBackend(args.endpoint or "http://127.0.0.1:11434")
+        else:
+            backend = OpenAICompatibleBackend(args.endpoint or "http://127.0.0.1:1234/v1/chat/completions")
+        rows = execute(_read_jobs(args.plan), backend)
+        write_jsonl(args.out, rows)
+        print(json.dumps({"jobs":len(rows),"successful":sum(bool(x.get("ok")) for x in rows)}))
+        return
+
+    rows = list(_read_jsonl(args.path))
+    if args.command == "report":
+        print(json.dumps(grouped(rows), indent=2))
     else:
-        print(json.dumps(summarize(_read_jsonl(args.path)), indent=2))
+        # compatibility with early result files that use total_seconds
+        print(json.dumps(summarize(rows), indent=2))
 
 
 if __name__ == "__main__":
